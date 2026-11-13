@@ -1,0 +1,55 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Tools
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build g++
+      - name: Build and test (ASan + UBSan)
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DJ1939_SANITIZE=ON
+          cmake --build build
+          ctest --test-dir build --output-on-failure
+
+  vcan:
+    # Live SocketCAN path on a virtual interface. Hosted runners do not always ship the vcan module.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Tools
+        run: |
+          sudo apt-get update && sudo apt-get install -y cmake ninja-build g++ can-utils
+          sudo apt-get install -y "linux-modules-extra-$(uname -r)" || true
+      - name: Build
+        run: cmake -S . -B build -G Ninja -DBUILD_TESTING=OFF && cmake --build build
+      - name: canplayer -> vcan0 -> j1939log live
+        run: |
+          if ! sudo modprobe vcan; then echo "::warning::vcan module not available on this runner"; exit 0; fi
+          sudo tests/vcan_test.sh build/j1939log traces/truck_pull_away.log
+
+  cross-arm:
+    # The target is an ARM dashcam: make sure the code cross-compiles (aarch64 and armhf).
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        triple: [aarch64-linux-gnu, arm-linux-gnueabihf]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Toolchain
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build g++-${{ matrix.triple }}
+      - name: Build
+        run: |
+          cmake -S . -B build -G Ninja -DBUILD_TESTING=OFF \
+            -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_CXX_COMPILER=${{ matrix.triple }}-g++
+          cmake --build build
+          file build/j1939log
