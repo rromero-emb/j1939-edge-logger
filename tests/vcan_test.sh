@@ -15,6 +15,7 @@ sleep 1
 canplayer -I "$trace" vcan0=can0 -t   # -t: ignore timestamps, send as fast as possible
 sleep 1
 kill -INT $pid
+timeout 10 sh -c "while kill -0 $pid 2>/dev/null; do sleep 0.2; done"
 wait $pid
 cat "$work/state.json"
 grep -q '"vin": "1XKAD49X0DJ123456"' "$work/state.json"

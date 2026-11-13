@@ -24,6 +24,7 @@ jobs:
   vcan:
     # Live SocketCAN path on a virtual interface. Hosted runners do not always ship the vcan module.
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - name: Tools

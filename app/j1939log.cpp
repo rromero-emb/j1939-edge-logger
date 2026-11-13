@@ -116,8 +116,16 @@ int live(const std::string &ifname, journal::Journal *j)
         std::perror("bind");
         return 1;
     }
-    std::signal(SIGINT, on_signal);
-    std::signal(SIGTERM, on_signal);
+    // sigaction without SA_RESTART: std::signal() on glibc restarts recvmsg() after the handler,
+    // so the loop would never see the flag. SO_RCVTIMEO is a second guard on a silent bus.
+    struct sigaction sa {};
+    sa.sa_handler = on_signal;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    ::sigaction(SIGINT, &sa, nullptr);
+    ::sigaction(SIGTERM, &sa, nullptr);
+    struct timeval rcv_timeout{1, 0};
+    ::setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &rcv_timeout, sizeof rcv_timeout);
     Logger lg(j, kPgns);
     configure(lg);
     uint64_t last_t = 0;
