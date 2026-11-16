@@ -40,3 +40,8 @@ if(BUILD_TESTING)
     add_test(NAME replay_sample_trace
         COMMAND ${Python3_EXECUTABLE} -I ${CMAKE_SOURCE_DIR}/tests/test_replay.py $<TARGET_FILE:j1939log> ${CMAKE_SOURCE_DIR})
 endif()
+
+include(GNUInstallDirs)
+install(TARGETS j1939log RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(FILES traces/truck_pull_away.log DESTINATION ${CMAKE_INSTALL_DATADIR}/j1939-edge-logger/traces)
+install(FILES LICENSE README.md DESTINATION ${CMAKE_INSTALL_DOCDIR})
